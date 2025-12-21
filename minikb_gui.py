@@ -135,6 +135,10 @@ class MiniKBDevice:
             except usb.core.USBError:
                 pass
 
+        # Find and cache endpoints
+        self._in_ep, self._in_size = self.find_in_endpoint()
+        print(f"Found IN endpoint: 0x{self._in_ep:02x}, size: {self._in_size}")
+
         # Send init packet
         self._send_packet(bytes([0x03] + [0x00] * 64))
         return True
@@ -162,6 +166,8 @@ class MiniKBDevice:
         self.device = None
         self.was_kernel_driver_active = {}
         self.interface_claimed = []
+        self._in_ep = None
+        self._in_size = None
 
     def _send_packet(self, data):
         """Send a 65-byte packet to the device"""
@@ -169,15 +175,28 @@ class MiniKBDevice:
             data = data + bytes(65 - len(data))
         self.device.write(ENDPOINT_OUT, data, timeout=1000)
 
+    def find_in_endpoint(self):
+        """Find the interrupt IN endpoint"""
+        cfg = self.device.get_active_configuration()
+        for intf in cfg:
+            for ep in intf:
+                if usb.util.endpoint_direction(ep.bEndpointAddress) == usb.util.ENDPOINT_IN:
+                    if usb.util.endpoint_type(ep.bmAttributes) == usb.util.ENDPOINT_TYPE_INTR:
+                        return ep.bEndpointAddress, ep.wMaxPacketSize
+        return ENDPOINT_IN, 64  # fallback
+
     def read_input(self, timeout=100):
         """Read input from the device (non-blocking with timeout)"""
         if self.device is None:
             return None
         try:
-            data = self.device.read(ENDPOINT_IN, 8, timeout=timeout)
+            # Use discovered endpoint and packet size
+            if not hasattr(self, '_in_ep'):
+                self._in_ep, self._in_size = self.find_in_endpoint()
+            data = self.device.read(self._in_ep, self._in_size, timeout=timeout)
             return bytes(data)
         except usb.core.USBError as e:
-            if e.errno == 110 or 'timeout' in str(e).lower():  # Timeout
+            if e.errno in (110, 75) or 'timeout' in str(e).lower():
                 return None
             raise
 
