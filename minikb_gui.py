@@ -654,36 +654,21 @@ class MiniKBApp:
         ttk.Button(known_row, text="Rainbow", width=8, command=lambda: self._set_led_mode_quick(2)).pack(side="left", padx=3)
         ttk.Button(known_row, text="FREEZE", width=8, command=lambda: self._set_led_mode_quick(3)).pack(side="left", padx=3)
 
-        # Experimental color control
-        exp_frame = ttk.LabelFrame(color_frame, text="Experimental Colors (try different packet formats)", padding="5")
-        exp_frame.pack(fill="x", pady=10)
+        # Auto-catch color by timing
+        catch_frame = ttk.LabelFrame(color_frame, text="Color Picker (Rainbow + timed Freeze)", padding="5")
+        catch_frame.pack(fill="x", pady=10)
 
-        # Format 1: color in byte 4
-        row1 = ttk.Frame(exp_frame)
-        row1.pack(fill="x", pady=2)
-        ttk.Label(row1, text="Format 1 (byte4):").pack(side="left", padx=5)
-        for name, color in [("Red", 1), ("Green", 4), ("Blue", 6), ("Purple", 7), ("White", 0)]:
-            btn = ttk.Button(row1, text=name, width=7,
-                            command=lambda c=color: self._try_color_format1(c))
-            btn.pack(side="left", padx=1)
+        row3 = ttk.Frame(catch_frame)
+        row3.pack(fill="x", pady=5)
+        ttk.Label(row3, text="Delay:").pack(side="left", padx=5)
 
-        # Format 2: color in byte 2 (instead of 0x18)
-        row2 = ttk.Frame(exp_frame)
-        row2.pack(fill="x", pady=2)
-        ttk.Label(row2, text="Format 2 (byte2):").pack(side="left", padx=5)
-        for name, color in [("Red", 1), ("Green", 4), ("Blue", 6), ("Purple", 7), ("White", 0)]:
-            btn = ttk.Button(row2, text=name, width=7,
-                            command=lambda c=color: self._try_color_format2(c))
-            btn.pack(side="left", padx=1)
-
-        # Format 3: combined (color << 4) | mode in byte 3
-        row3 = ttk.Frame(exp_frame)
-        row3.pack(fill="x", pady=2)
-        ttk.Label(row3, text="Format 3 (combined):").pack(side="left", padx=5)
-        for name, color in [("Red", 1), ("Green", 4), ("Blue", 6), ("Purple", 7)]:
-            btn = ttk.Button(row3, text=name, width=7,
-                            command=lambda c=color: self._try_color_format3(c))
-            btn.pack(side="left", padx=1)
+        # Delay slider
+        self.catch_delay_var = tk.DoubleVar(value=0.5)
+        ttk.Scale(row3, from_=0.1, to=3.0, variable=self.catch_delay_var,
+                  orient="horizontal", length=100).pack(side="left", padx=5)
+        ttk.Label(row3, textvariable=self.catch_delay_var, width=4).pack(side="left")
+        ttk.Label(row3, text="sec").pack(side="left")
+        ttk.Button(row3, text="Catch!", width=8, command=self._auto_catch_color).pack(side="left", padx=10)
 
 
         # RGB log
@@ -723,57 +708,32 @@ class MiniKBApp:
         except Exception as e:
             self._rgb_log(f"Error: {e}")
 
-    def _try_color_format1(self, color):
-        """Try color in byte 4: [0x03, 0xb0, 0x18, mode, COLOR, 0, 0, 0, 0]"""
+    def _auto_catch_color(self):
+        """Start Rainbow, wait delay, then Freeze to catch color"""
         if not self.connected:
             messagebox.showwarning("Not Connected", "Please connect first.")
             return
 
-        mode = 1  # steady mode
-        packet = bytes([0x03, 0xb0, 0x18, mode, color, 0x00, 0x00, 0x00, 0x00])
-        self._rgb_log(f"Format1: {packet.hex()}")
+        delay = self.catch_delay_var.get()
+        self._rgb_log(f"Auto-catch: Rainbow -> wait {delay:.1f}s -> Freeze")
+
         try:
-            self.device._send_led_packet(bytes([0x03, 0xa1, 0x01, 0, 0, 0, 0, 0, 0]))
-            self.device._send_led_packet(packet)
-            self.device._send_led_packet(bytes([0x03, 0xaa, 0xa1, 0, 0, 0, 0, 0, 0]))
-            self._rgb_log("Sent!")
+            # Start rainbow
+            self.device.set_led_mode(2)
+            self._rgb_log("Rainbow started...")
+
+            # Schedule freeze after delay
+            self.root.after(int(delay * 1000), self._do_freeze)
         except Exception as e:
             self._rgb_log(f"Error: {e}")
 
-    def _try_color_format2(self, color):
-        """Try color in byte 2: [0x03, 0xb0, COLOR, mode, 0, 0, 0, 0, 0]"""
-        if not self.connected:
-            messagebox.showwarning("Not Connected", "Please connect first.")
-            return
-
-        mode = 1
-        packet = bytes([0x03, 0xb0, color, mode, 0x00, 0x00, 0x00, 0x00, 0x00])
-        self._rgb_log(f"Format2: {packet.hex()}")
+    def _do_freeze(self):
+        """Execute freeze after delay"""
         try:
-            self.device._send_led_packet(bytes([0x03, 0xa1, 0x01, 0, 0, 0, 0, 0, 0]))
-            self.device._send_led_packet(packet)
-            self.device._send_led_packet(bytes([0x03, 0xaa, 0xa1, 0, 0, 0, 0, 0, 0]))
-            self._rgb_log("Sent!")
+            self.device.set_led_mode(3)
+            self._rgb_log("Freeze! Color caught.")
         except Exception as e:
-            self._rgb_log(f"Error: {e}")
-
-    def _try_color_format3(self, color):
-        """Try combined: [0x03, 0xb0, 0x18, (color<<4)|mode, 0, 0, 0, 0, 0]"""
-        if not self.connected:
-            messagebox.showwarning("Not Connected", "Please connect first.")
-            return
-
-        mode = 1
-        combined = (color << 4) | mode
-        packet = bytes([0x03, 0xb0, 0x18, combined, 0x00, 0x00, 0x00, 0x00, 0x00])
-        self._rgb_log(f"Format3: {packet.hex()} (combined=0x{combined:02x})")
-        try:
-            self.device._send_led_packet(bytes([0x03, 0xa1, 0x01, 0, 0, 0, 0, 0, 0]))
-            self.device._send_led_packet(packet)
-            self.device._send_led_packet(bytes([0x03, 0xaa, 0xa1, 0, 0, 0, 0, 0, 0]))
-            self._rgb_log("Sent!")
-        except Exception as e:
-            self._rgb_log(f"Error: {e}")
+            self._rgb_log(f"Freeze error: {e}")
 
 
     def _toggle_monitoring(self):
