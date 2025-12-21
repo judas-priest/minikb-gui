@@ -135,9 +135,11 @@ class MiniKBDevice:
             except usb.core.USBError:
                 pass
 
-        # Find and cache endpoints
-        self._in_ep, self._in_size = self.find_in_endpoint()
-        print(f"Found IN endpoint: 0x{self._in_ep:02x}, size: {self._in_size}")
+        # Find and cache all endpoints
+        self._all_endpoints = self.find_all_in_endpoints()
+        print(f"Found {len(self._all_endpoints)} IN endpoint(s)")
+        for ep_addr, ep_size, intf in self._all_endpoints:
+            print(f"  -> 0x{ep_addr:02x} size={ep_size} interface={intf}")
 
         # Send init packet
         self._send_packet(bytes([0x03] + [0x00] * 64))
@@ -166,8 +168,7 @@ class MiniKBDevice:
         self.device = None
         self.was_kernel_driver_active = {}
         self.interface_claimed = []
-        self._in_ep = None
-        self._in_size = None
+        self._all_endpoints = []
 
     def _send_packet(self, data):
         """Send a 65-byte packet to the device"""
@@ -175,30 +176,45 @@ class MiniKBDevice:
             data = data + bytes(65 - len(data))
         self.device.write(ENDPOINT_OUT, data, timeout=1000)
 
-    def find_in_endpoint(self):
-        """Find the interrupt IN endpoint"""
+    def find_all_in_endpoints(self):
+        """Find all interrupt IN endpoints"""
+        endpoints = []
         cfg = self.device.get_active_configuration()
+        print(f"Device configuration: {cfg.bConfigurationValue}")
         for intf in cfg:
+            print(f"  Interface {intf.bInterfaceNumber}: class={intf.bInterfaceClass}, subclass={intf.bInterfaceSubClass}")
             for ep in intf:
+                direction = "IN" if usb.util.endpoint_direction(ep.bEndpointAddress) == usb.util.ENDPOINT_IN else "OUT"
+                ep_type = {0: "CTRL", 1: "ISO", 2: "BULK", 3: "INTR"}[usb.util.endpoint_type(ep.bmAttributes)]
+                print(f"    Endpoint 0x{ep.bEndpointAddress:02x}: {direction} {ep_type}, size={ep.wMaxPacketSize}")
                 if usb.util.endpoint_direction(ep.bEndpointAddress) == usb.util.ENDPOINT_IN:
                     if usb.util.endpoint_type(ep.bmAttributes) == usb.util.ENDPOINT_TYPE_INTR:
-                        return ep.bEndpointAddress, ep.wMaxPacketSize
-        return ENDPOINT_IN, 64  # fallback
+                        endpoints.append((ep.bEndpointAddress, ep.wMaxPacketSize, intf.bInterfaceNumber))
+        return endpoints if endpoints else [(ENDPOINT_IN, 64, 0)]
+
+    def find_in_endpoint(self):
+        """Find the first interrupt IN endpoint (legacy)"""
+        endpoints = self.find_all_in_endpoints()
+        if endpoints:
+            return endpoints[0][0], endpoints[0][1]
+        return ENDPOINT_IN, 64
 
     def read_input(self, timeout=100):
-        """Read input from the device (non-blocking with timeout)"""
+        """Read input from all IN endpoints (non-blocking with timeout)"""
         if self.device is None:
             return None
-        try:
-            # Use discovered endpoint and packet size
-            if not hasattr(self, '_in_ep'):
-                self._in_ep, self._in_size = self.find_in_endpoint()
-            data = self.device.read(self._in_ep, self._in_size, timeout=timeout)
-            return bytes(data)
-        except usb.core.USBError as e:
-            if e.errno in (110, 75) or 'timeout' in str(e).lower():
-                return None
-            raise
+
+        results = []
+        for ep_addr, ep_size, intf in self._all_endpoints:
+            try:
+                data = self.device.read(ep_addr, ep_size, timeout=timeout)
+                if data:
+                    results.append((ep_addr, bytes(data)))
+            except usb.core.USBError as e:
+                if e.errno not in (110, 75) and 'timeout' not in str(e).lower():
+                    pass  # ignore timeouts and overflows
+
+        return results if results else None
 
     def set_key(self, button_id, keycode):
         """Program a button with a specific keycode"""
@@ -262,22 +278,24 @@ class InputMonitor:
         """Main monitoring loop"""
         while self.running:
             try:
-                data = self.device.read_input(timeout=50)
-                if data:
-                    self._process_input(data)
+                results = self.device.read_input(timeout=50)
+                if results:
+                    for ep_addr, data in results:
+                        self._process_input(data, ep_addr)
             except Exception as e:
                 if self.running:
                     self.callback({'type': 'error', 'message': str(e)})
                     time.sleep(0.5)
 
-    def _process_input(self, data):
+    def _process_input(self, data, ep_addr=0):
         """Process HID input data"""
-        if len(data) < 3:
+        if len(data) < 1:
             return
 
         # Always log raw data for debugging
         self.callback({
             'type': 'raw',
+            'endpoint': ep_addr,
             'data': data.hex(),
             'bytes': list(data)
         })
@@ -546,9 +564,10 @@ class MiniKBApp:
 
         if event_type == 'raw':
             # Debug output - show all raw packets
+            ep = event.get('endpoint', 0)
             data = event.get('data', '')
             bytes_list = event.get('bytes', [])
-            self._log_event(f"RAW: {data}  bytes: {bytes_list}", "raw")
+            self._log_event(f"RAW EP{ep:02x}: {data}  bytes: {bytes_list}", "raw")
             return
 
         key_name = event.get('key_name', '?')
