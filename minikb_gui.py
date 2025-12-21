@@ -368,6 +368,9 @@ class MiniKBApp:
         self._create_ui()
         self._load_config()
 
+        # Set initial config to match detected device state
+        self._set_detected_config()
+
     def _create_ui(self):
         """Create the user interface"""
         # Main frame
@@ -722,8 +725,18 @@ class MiniKBApp:
             if key_name in HID_KEYCODES:
                 combo.set(key_name)
 
+    def _set_detected_config(self):
+        """Set UI to match currently detected device configuration"""
+        # Based on device testing - current actual state
+        detected = {
+            'Button 1': 'F13', 'Button 2': 'F14', 'Button 3': 'F15',
+            'Button 4': 'C', 'Button 5': 'C', 'Button 6': 'C',  # Currently Ctrl+C
+            'Knob Left': 'F16', 'Knob Press': 'F17', 'Knob Right': 'F18',
+        }
+        self._apply_config_to_ui(detected)
+
     def _reset_config(self):
-        """Reset all settings to default based on actual device mapping"""
+        """Reset all settings to recommended F13-F21 mapping"""
         defaults = {
             'Button 1': 'F13', 'Button 2': 'F14', 'Button 3': 'F15',
             'Button 4': 'F16', 'Button 5': 'F17', 'Button 6': 'F18',
