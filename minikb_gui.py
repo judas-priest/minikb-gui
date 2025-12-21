@@ -637,95 +637,25 @@ class MiniKBApp:
                                     "Select color and mode, then click Apply.",
                   wraplength=600).pack()
 
-        # Color and mode controls
+        # LED controls
         color_frame = ttk.LabelFrame(parent, text="LED Settings", padding="10")
         color_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
-
-        # Color selection
-        color_row = ttk.Frame(color_frame)
-        color_row.pack(fill="x", pady=5)
-
-        ttk.Label(color_row, text="Color:", width=10).pack(side="left")
-        self.led_color_var = tk.StringVar(value="Red")
-        color_combo = ttk.Combobox(color_row, textvariable=self.led_color_var,
-                                   values=list(LED_COLORS.keys()), state="readonly", width=15)
-        color_combo.pack(side="left", padx=5)
-
-        # Color preview buttons
-        for color_name in ['Red', 'Green', 'Blue', 'Cyan', 'Purple', 'White']:
-            btn = ttk.Button(color_row, text=color_name, width=7,
-                            command=lambda c=color_name: self.led_color_var.set(c))
-            btn.pack(side="left", padx=2)
-
-        # Mode selection
-        mode_row = ttk.Frame(color_frame)
-        mode_row.pack(fill="x", pady=5)
-
-        ttk.Label(mode_row, text="Mode:", width=10).pack(side="left")
-        self.led_mode_var = tk.StringVar(value="Steady")
-        mode_combo = ttk.Combobox(mode_row, textvariable=self.led_mode_var,
-                                  values=list(LED_MODES.keys()), state="readonly", width=15)
-        mode_combo.pack(side="left", padx=5)
-
-        # Mode buttons
-        for mode_name in LED_MODES.keys():
-            btn = ttk.Button(mode_row, text=mode_name, width=8,
-                            command=lambda m=mode_name: self.led_mode_var.set(m))
-            btn.pack(side="left", padx=2)
-
-        # Raw mode value
-        raw_row = ttk.Frame(color_frame)
-        raw_row.pack(fill="x", pady=5)
-
-        ttk.Label(raw_row, text="Raw Mode:", width=10).pack(side="left")
-        self.led_raw_var = tk.IntVar(value=1)
-        raw_spin = ttk.Spinbox(raw_row, from_=0, to=255, textvariable=self.led_raw_var, width=8)
-        raw_spin.pack(side="left", padx=5)
-        ttk.Label(raw_row, text="(0-255, use for direct mode control)").pack(side="left")
 
         # Working modes
         modes_frame = ttk.LabelFrame(color_frame, text="LED Modes", padding="5")
         modes_frame.pack(fill="x", pady=10)
 
-        # Known working modes
+        # Working modes
         known_row = ttk.Frame(modes_frame)
-        known_row.pack(fill="x", pady=2)
-        ttk.Label(known_row, text="Working:").pack(side="left", padx=5)
-        ttk.Button(known_row, text="Off (0)", width=8, command=lambda: self._set_led_mode_quick(0)).pack(side="left", padx=2)
-        ttk.Button(known_row, text="Cyan (1)", width=8, command=lambda: self._set_led_mode_quick(1)).pack(side="left", padx=2)
-        ttk.Button(known_row, text="Rainbow (2)", width=10, command=lambda: self._set_led_mode_quick(2)).pack(side="left", padx=2)
+        known_row.pack(fill="x", pady=5)
 
-        # Color+mode combinations to try: (color << 4) | mode
-        # Colors: 0=White, 1=Red, 2=Orange, 3=Yellow, 4=Green, 5=Cyan, 6=Blue, 7=Purple
-        color_row = ttk.Frame(modes_frame)
-        color_row.pack(fill="x", pady=5)
-        ttk.Label(color_row, text="Try colors:").pack(side="left", padx=5)
+        ttk.Button(known_row, text="Off", width=6, command=lambda: self._set_led_mode_quick(0)).pack(side="left", padx=3)
+        ttk.Button(known_row, text="Cyan", width=6, command=lambda: self._set_led_mode_quick(1)).pack(side="left", padx=3)
+        ttk.Button(known_row, text="Rainbow", width=8, command=lambda: self._set_led_mode_quick(2)).pack(side="left", padx=3)
+        ttk.Button(known_row, text="FREEZE", width=8, command=lambda: self._set_led_mode_quick(3)).pack(side="left", padx=3)
 
-        color_modes = [
-            ("Red", 0x11), ("Orange", 0x21), ("Yellow", 0x31), ("Green", 0x41),
-            ("Cyan", 0x51), ("Blue", 0x61), ("Purple", 0x71), ("White", 0x01)
-        ]
-        for name, mode in color_modes:
-            btn = ttk.Button(color_row, text=name, width=7,
-                            command=lambda m=mode: self._set_led_mode_quick(m))
-            btn.pack(side="left", padx=1)
+        ttk.Label(known_row, text="  Tip: Start Rainbow, then FREEZE to pick color!", foreground="gray").pack(side="left", padx=10)
 
-        # Raw mode buttons 0-19
-        raw_frame = ttk.Frame(modes_frame)
-        raw_frame.pack(fill="x", pady=5)
-        ttk.Label(raw_frame, text="Raw 0-9:").pack(side="left", padx=5)
-        for i in range(10):
-            btn = ttk.Button(raw_frame, text=str(i), width=3,
-                            command=lambda m=i: self._set_led_mode_quick(m))
-            btn.pack(side="left", padx=1)
-
-        # Action buttons
-        action_frame = ttk.Frame(color_frame)
-        action_frame.pack(fill="x", pady=10)
-
-        ttk.Button(action_frame, text="Apply Color+Mode", command=self._apply_led_color).pack(side="left", padx=5)
-        ttk.Button(action_frame, text="Apply Raw Mode", command=self._apply_led_raw).pack(side="left", padx=5)
-        ttk.Button(action_frame, text="LED Off", command=self._led_off).pack(side="left", padx=5)
 
         # RGB log
         log_frame = ttk.LabelFrame(parent, text="RGB Command Log", padding="5")
@@ -765,79 +695,6 @@ class MiniKBApp:
         except Exception as e:
             self._rgb_log(f"Error: {e}")
 
-    def _apply_led_color(self):
-        """Apply LED color and mode"""
-        print("DEBUG: _apply_led_color clicked")
-        if not self.connected:
-            print("DEBUG: Not connected")
-            messagebox.showwarning("Not Connected", "Please connect to the device first.")
-            return
-
-        color_name = self.led_color_var.get()
-        mode_name = self.led_mode_var.get()
-
-        color_code = LED_COLORS.get(color_name, 1)
-        mode_code = LED_MODES.get(mode_name, 1)
-
-        print(f"DEBUG: color={color_name}({color_code}), mode={mode_name}({mode_code})")
-        self._rgb_log(f"Applying: {color_name} (code={color_code}), {mode_name} (code={mode_code})")
-
-        try:
-            self.device.set_led_color_mode(color_code, mode_code)
-            self._rgb_log("LED color+mode applied!")
-        except Exception as e:
-            print(f"DEBUG: Error: {e}")
-            self._rgb_log(f"Error: {e}")
-
-    def _apply_led_raw(self):
-        """Apply raw LED mode value"""
-        print("DEBUG: _apply_led_raw clicked")
-        if not self.connected:
-            print("DEBUG: Not connected")
-            messagebox.showwarning("Not Connected", "Please connect to the device first.")
-            return
-
-        raw_mode = self.led_raw_var.get()
-        print(f"DEBUG: raw_mode={raw_mode}")
-        self._rgb_log(f"Applying raw mode: {raw_mode} (0x{raw_mode:02x})")
-
-        try:
-            self.device.set_led_mode(raw_mode)
-            self._rgb_log(f"Raw mode {raw_mode} applied!")
-        except Exception as e:
-            print(f"DEBUG: Error: {e}")
-            self._rgb_log(f"Error: {e}")
-
-    def _led_off(self):
-        """Turn LED off"""
-        print("DEBUG: _led_off clicked")
-        if not self.connected:
-            print("DEBUG: Not connected")
-            messagebox.showwarning("Not Connected", "Please connect to the device first.")
-            return
-
-        self._rgb_log("Turning LED off...")
-
-        try:
-            self.device.set_led_mode(0)
-            self._rgb_log("LED turned off!")
-        except Exception as e:
-            print(f"DEBUG: Error: {e}")
-            self._rgb_log(f"Error: {e}")
-
-    def _try_all_led_modes(self):
-        """Try all LED modes"""
-        if not self.connected:
-            messagebox.showwarning("Not Connected", "Please connect to the device first.")
-            return
-
-        self._rgb_log("Trying all LED modes 0-20... Watch the keyboard!")
-
-        try:
-            self.device.try_all_led_modes()
-            self._rgb_log("Finished trying all modes")
-        except Exception as e:
-            self._rgb_log(f"Error: {e}")
 
     def _toggle_monitoring(self):
         """Toggle input monitoring"""
