@@ -589,27 +589,26 @@ class MiniKBApp:
             self._highlight_button(keycode, False)
 
     def _highlight_button(self, keycode, pressed):
-        """Highlight button indicator based on keycode"""
-        # Map common F13-F21 to button indicators
-        key_to_button = {
-            0x68: 'Button 1',  # F13
-            0x69: 'Button 2',  # F14
-            0x6a: 'Button 3',  # F15
-            0x6b: 'Button 4',  # F16
-            0x6c: 'Button 5',  # F17
-            0x6d: 'Button 6',  # F18
-            0x6e: 'Knob Left',  # F19
-            0x6f: 'Knob Press',  # F20
-            0x70: 'Knob Right',  # F21
-        }
+        """Highlight button indicator based on keycode and current config"""
+        # Build dynamic mapping from current UI config
+        key_to_buttons = {}
+        for btn_name, combo in self.key_combos.items():
+            key_name = combo.get()
+            kc = HID_KEYCODES.get(key_name, 0)
+            if kc != 0:
+                if kc not in key_to_buttons:
+                    key_to_buttons[kc] = []
+                key_to_buttons[kc].append(btn_name)
 
-        button_name = key_to_button.get(keycode)
-        if button_name and button_name in self.button_indicators:
-            indicator = self.button_indicators[button_name]
-            if pressed:
-                indicator.config(bg="lime")
-            else:
-                indicator.config(bg="lightgray")
+        # Highlight all buttons that match this keycode
+        button_names = key_to_buttons.get(keycode, [])
+        for button_name in button_names:
+            if button_name in self.button_indicators:
+                indicator = self.button_indicators[button_name]
+                if pressed:
+                    indicator.config(bg="lime")
+                else:
+                    indicator.config(bg="lightgray")
 
     def _log_event(self, message, tag="info"):
         """Add message to log"""
