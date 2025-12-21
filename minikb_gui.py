@@ -333,17 +333,17 @@ class MiniKBDevice:
 
         return self.set_led_mode(combined)
 
-    def try_all_led_modes(self):
-        """Try all LED modes 0-255 to find working ones"""
+    def try_all_led_modes(self, max_mode=20, delay=1.5):
+        """Try all LED modes to find working ones"""
         if self.device is None:
             raise RuntimeError("Not connected")
 
-        self._log_rgb("Trying LED modes 0-20...")
-        for mode in range(21):
+        self._log_rgb(f"Trying LED modes 0-{max_mode} with {delay}s delay...")
+        for mode in range(max_mode + 1):
             try:
-                self._log_rgb(f"--- Mode {mode} ---")
+                self._log_rgb(f"=== MODE {mode} ===")
                 self.set_led_mode(mode)
-                time.sleep(0.3)
+                time.sleep(delay)
             except Exception as e:
                 self._log_rgb(f"Mode {mode} error: {e}")
 
@@ -718,7 +718,9 @@ class MiniKBApp:
 
     def _apply_led_color(self):
         """Apply LED color and mode"""
+        print("DEBUG: _apply_led_color clicked")
         if not self.connected:
+            print("DEBUG: Not connected")
             messagebox.showwarning("Not Connected", "Please connect to the device first.")
             return
 
@@ -728,32 +730,40 @@ class MiniKBApp:
         color_code = LED_COLORS.get(color_name, 1)
         mode_code = LED_MODES.get(mode_name, 1)
 
+        print(f"DEBUG: color={color_name}({color_code}), mode={mode_name}({mode_code})")
         self._rgb_log(f"Applying: {color_name} (code={color_code}), {mode_name} (code={mode_code})")
 
         try:
             self.device.set_led_color_mode(color_code, mode_code)
             self._rgb_log("LED color+mode applied!")
         except Exception as e:
+            print(f"DEBUG: Error: {e}")
             self._rgb_log(f"Error: {e}")
 
     def _apply_led_raw(self):
         """Apply raw LED mode value"""
+        print("DEBUG: _apply_led_raw clicked")
         if not self.connected:
+            print("DEBUG: Not connected")
             messagebox.showwarning("Not Connected", "Please connect to the device first.")
             return
 
         raw_mode = self.led_raw_var.get()
+        print(f"DEBUG: raw_mode={raw_mode}")
         self._rgb_log(f"Applying raw mode: {raw_mode} (0x{raw_mode:02x})")
 
         try:
             self.device.set_led_mode(raw_mode)
             self._rgb_log(f"Raw mode {raw_mode} applied!")
         except Exception as e:
+            print(f"DEBUG: Error: {e}")
             self._rgb_log(f"Error: {e}")
 
     def _led_off(self):
         """Turn LED off"""
+        print("DEBUG: _led_off clicked")
         if not self.connected:
+            print("DEBUG: Not connected")
             messagebox.showwarning("Not Connected", "Please connect to the device first.")
             return
 
@@ -763,6 +773,7 @@ class MiniKBApp:
             self.device.set_led_mode(0)
             self._rgb_log("LED turned off!")
         except Exception as e:
+            print(f"DEBUG: Error: {e}")
             self._rgb_log(f"Error: {e}")
 
     def _try_all_led_modes(self):
