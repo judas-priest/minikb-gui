@@ -275,6 +275,13 @@ class InputMonitor:
         if len(data) < 3:
             return
 
+        # Always log raw data for debugging
+        self.callback({
+            'type': 'raw',
+            'data': data.hex(),
+            'bytes': list(data)
+        })
+
         # Standard HID keyboard report:
         # Byte 0: Modifier keys
         # Byte 1: Reserved
@@ -488,6 +495,7 @@ class MiniKBApp:
         self.log_text.tag_configure("release", foreground="red")
         self.log_text.tag_configure("error", foreground="orange")
         self.log_text.tag_configure("time", foreground="gray")
+        self.log_text.tag_configure("raw", foreground="blue")
 
     def _toggle_monitoring(self):
         """Toggle input monitoring"""
@@ -534,6 +542,13 @@ class MiniKBApp:
 
         if event_type == 'error':
             self._log_event(f"Error: {event.get('message')}", "error")
+            return
+
+        if event_type == 'raw':
+            # Debug output - show all raw packets
+            data = event.get('data', '')
+            bytes_list = event.get('bytes', [])
+            self._log_event(f"RAW: {data}  bytes: {bytes_list}", "raw")
             return
 
         key_name = event.get('key_name', '?')
