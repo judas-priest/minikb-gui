@@ -26,7 +26,7 @@ PRODUCT_ID = 0x8890
 ENDPOINT_OUT = 0x02
 ENDPOINT_IN = 0x81  # Interrupt IN endpoint for reading keypresses
 
-# Button identifiers for the device
+# Button identifiers for the device (6 keys + encoder with button)
 BUTTONS = {
     'Button 1': 0x01,
     'Button 2': 0x02,
@@ -439,9 +439,9 @@ class MiniKBApp:
     def _create_encoder_tab(self, parent):
         """Create the encoder configuration tab"""
         encoder_items = [
-            ('Knob Left', 'Rotate Left'),
-            ('Knob Right', 'Rotate Right'),
-            ('Knob Press', 'Press/Click'),
+            ('Knob Left', 'Rotate CCW (Left)'),
+            ('Knob Press', 'Press (Click)'),
+            ('Knob Right', 'Rotate CW (Right)'),
         ]
         sorted_keys = list(HID_KEYCODES.keys())
 
@@ -480,7 +480,7 @@ class MiniKBApp:
         btn_container = ttk.Frame(visual_frame)
         btn_container.pack(fill="x")
 
-        button_labels = ['1', '2', '3', '4', '5', '6', 'L', 'P', 'R']
+        button_labels = ['1', '2', '3', '4', '5', '6', '<', 'O', '>']
         button_names = ['Button 1', 'Button 2', 'Button 3', 'Button 4', 'Button 5', 'Button 6',
                         'Knob Left', 'Knob Press', 'Knob Right']
 
@@ -723,7 +723,7 @@ class MiniKBApp:
                 combo.set(key_name)
 
     def _reset_config(self):
-        """Reset all settings to default (F13-F21)"""
+        """Reset all settings to default based on actual device mapping"""
         defaults = {
             'Button 1': 'F13', 'Button 2': 'F14', 'Button 3': 'F15',
             'Button 4': 'F16', 'Button 5': 'F17', 'Button 6': 'F18',
