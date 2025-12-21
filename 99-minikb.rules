@@ -1,0 +1,11 @@
+# udev rules for MiniKB 6-key + encoder (1189:8890)
+# Copy this file to /etc/udev/rules.d/ and reload:
+#   sudo cp 99-minikb.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+
+# Allow access to MiniKB device for users in plugdev group
+SUBSYSTEM=="usb", ATTR{idVendor}=="1189", ATTR{idProduct}=="8890", MODE="0666", GROUP="plugdev"
+
+# Alternative: allow access for all users
+# SUBSYSTEM=="usb", ATTR{idVendor}=="1189", ATTR{idProduct}=="8890", MODE="0666"
