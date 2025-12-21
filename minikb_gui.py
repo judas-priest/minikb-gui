@@ -97,20 +97,26 @@ MODIFIER_NAMES = {
 }
 
 
-# RGB LED presets (R, G, B values 0-255)
-RGB_PRESETS = {
-    'Off': (0, 0, 0),
-    'Red': (255, 0, 0),
-    'Green': (0, 255, 0),
-    'Blue': (0, 0, 255),
-    'White': (255, 255, 255),
-    'Cyan': (0, 255, 255),
-    'Magenta': (255, 0, 255),
-    'Yellow': (255, 255, 0),
-    'Orange': (255, 128, 0),
-    'Purple': (128, 0, 255),
-    'Pink': (255, 128, 128),
-    'Warm White': (255, 200, 150),
+# LED colors supported by ch57x protocol (from ch57x-keyboard-tool)
+LED_COLORS = {
+    'Off': 0,
+    'White': 0,
+    'Red': 1,
+    'Orange': 2,
+    'Yellow': 3,
+    'Green': 4,
+    'Cyan': 5,
+    'Blue': 6,
+    'Purple': 7,
+}
+
+# LED modes
+LED_MODES = {
+    'Off': 0,
+    'Steady': 1,
+    'Breathe': 2,
+    'Blink': 3,
+    'Rainbow': 4,
 }
 
 
@@ -268,119 +274,78 @@ class MiniKBDevice:
 
     def _log_rgb(self, message):
         """Log RGB-related messages"""
+        print(f"DEBUG RGB: {message}")
         if self.rgb_log_callback:
             self.rgb_log_callback(message)
 
-    def set_rgb_experimental(self, r, g, b, led_index=0, pattern_id=0):
-        """Try experimental RGB control commands.
+    def _send_led_packet(self, data):
+        """Send LED control packet (9 bytes for ch57x protocol)"""
+        # Pad to 65 bytes for USB HID
+        if len(data) < 65:
+            data = data + bytes(65 - len(data))
+        self.device.write(ENDPOINT_OUT, data, timeout=1000)
 
-        pattern_id selects different command formats to try:
-        0: Standard format - 0x03, 0xb0, led, r, g, b
-        1: Mode format - 0x03, 0xb1, mode, r, g, b
-        2: Feature report style - 0x07, led, r, g, b, brightness
-        3: Alt format - 0x03, 0xc0, led, r, g, b
-        4: Direct format - 0x09, r, g, b, led
-        5: Brightness format - 0x03, 0xb2, brightness, r, g, b
+    def set_led_mode(self, mode):
+        """Set LED mode using ch57x protocol for 8890 keyboard.
+
+        Protocol from ch57x-keyboard-tool:
+        1. Init:   [0x03, 0xa1, 0x01, 0, 0, 0, 0, 0, 0]
+        2. Mode:   [0x03, 0xb0, 0x18, <mode>, 0, 0, 0, 0, 0]
+        3. Finish: [0x03, 0xaa, 0xa1, 0, 0, 0, 0, 0, 0]
         """
         if self.device is None:
             raise RuntimeError("Not connected")
 
-        patterns = {
-            0: bytes([0x03, 0xb0, led_index, r, g, b] + [0x00] * 59),
-            1: bytes([0x03, 0xb1, 0x01, r, g, b] + [0x00] * 59),  # mode=1
-            2: bytes([0x07, led_index, r, g, b, 0xff] + [0x00] * 59),  # with brightness
-            3: bytes([0x03, 0xc0, led_index, r, g, b] + [0x00] * 59),
-            4: bytes([0x09, r, g, b, led_index] + [0x00] * 60),
-            5: bytes([0x03, 0xb2, 0xff, r, g, b] + [0x00] * 59),  # brightness=255
-            6: bytes([0x03, 0xa0, r, g, b] + [0x00] * 60),  # a0 command
-            7: bytes([0x03, 0xab, led_index, r, g, b] + [0x00] * 59),  # ab command
-            8: bytes([0x03, 0xac, r, g, b, led_index] + [0x00] * 59),  # ac command
-            9: bytes([0x03, 0xad, 0x01, r, g, b] + [0x00] * 59),  # ad with mode
-            10: bytes([0x03, 0x10, led_index, r, g, b] + [0x00] * 59),  # 0x10 cmd
-            11: bytes([0x03, 0x20, r, g, b, led_index] + [0x00] * 59),  # 0x20 cmd
-            12: bytes([0x03, 0x30, 0x01, r, g, b] + [0x00] * 59),  # 0x30 with mode
-        }
+        self._log_rgb(f"Setting LED mode: {mode}")
 
-        packet = patterns.get(pattern_id, patterns[0])
-        self._log_rgb(f"Trying pattern {pattern_id}: {packet[:10].hex()}...")
+        # Init packet
+        init_packet = bytes([0x03, 0xa1, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        self._log_rgb(f"  Init: {init_packet.hex()}")
+        self._send_led_packet(init_packet)
 
-        try:
-            self._send_packet(packet)
-            return True
-        except usb.core.USBError as e:
-            self._log_rgb(f"Pattern {pattern_id} error: {e}")
-            return False
+        # Mode packet
+        mode_packet = bytes([0x03, 0xb0, 0x18, mode, 0x00, 0x00, 0x00, 0x00, 0x00])
+        self._log_rgb(f"  Mode: {mode_packet.hex()}")
+        self._send_led_packet(mode_packet)
 
-    def set_rgb_all_patterns(self, r, g, b, led_index=0):
-        """Try all RGB patterns sequentially"""
-        results = []
-        for pattern_id in range(13):
+        # Finish packet
+        finish_packet = bytes([0x03, 0xaa, 0xa1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        self._log_rgb(f"  Finish: {finish_packet.hex()}")
+        self._send_led_packet(finish_packet)
+
+        self._log_rgb(f"LED mode {mode} set successfully")
+        return True
+
+    def set_led_color_mode(self, color_code, mode_code=1):
+        """Set LED with color and mode.
+
+        Color codes: 0=White, 1=Red, 2=Orange, 3=Yellow, 4=Green, 5=Cyan, 6=Blue, 7=Purple
+        Mode codes: 0=Off, 1=Steady, 2=Breathe, 3=Blink, etc.
+
+        Combined mode byte might be: (color << 4) | mode
+        """
+        if self.device is None:
+            raise RuntimeError("Not connected")
+
+        # Try different encodings
+        combined = (color_code << 4) | mode_code
+        self._log_rgb(f"Setting LED: color={color_code}, mode={mode_code}, combined=0x{combined:02x}")
+
+        return self.set_led_mode(combined)
+
+    def try_all_led_modes(self):
+        """Try all LED modes 0-255 to find working ones"""
+        if self.device is None:
+            raise RuntimeError("Not connected")
+
+        self._log_rgb("Trying LED modes 0-20...")
+        for mode in range(21):
             try:
-                success = self.set_rgb_experimental(r, g, b, led_index, pattern_id)
-                results.append((pattern_id, success, None))
-                time.sleep(0.1)  # Small delay between commands
+                self._log_rgb(f"--- Mode {mode} ---")
+                self.set_led_mode(mode)
+                time.sleep(0.3)
             except Exception as e:
-                results.append((pattern_id, False, str(e)))
-        return results
-
-    def set_rgb_control_transfer(self, r, g, b, led_index=0):
-        """Try RGB control via control transfer (vendor-specific)"""
-        if self.device is None:
-            raise RuntimeError("Not connected")
-
-        # bmRequestType: 0x21 = Host to Device, Class, Interface
-        # bRequest: 0x09 = SET_REPORT (HID)
-        # wValue: 0x0300 = Report Type (Feature=3) | Report ID (0)
-        # wIndex: interface number
-
-        data = bytes([led_index, r, g, b, 0xff, 0x00, 0x00, 0x00])
-
-        control_configs = [
-            # (bmRequestType, bRequest, wValue, wIndex)
-            (0x21, 0x09, 0x0300, 0),  # Standard HID SET_REPORT Feature
-            (0x21, 0x09, 0x0200, 0),  # HID SET_REPORT Output
-            (0x40, 0x01, 0x0000, 0),  # Vendor specific
-            (0x40, 0xb0, led_index, 0),  # Vendor with LED index
-            (0x21, 0x09, 0x0307, 0),  # Feature report ID 7
-            (0x21, 0x09, 0x0309, 0),  # Feature report ID 9
-        ]
-
-        results = []
-        for bmRequestType, bRequest, wValue, wIndex in control_configs:
-            try:
-                self._log_rgb(f"Control transfer: type=0x{bmRequestType:02x} req=0x{bRequest:02x} "
-                             f"val=0x{wValue:04x} idx={wIndex}")
-                self.device.ctrl_transfer(bmRequestType, bRequest, wValue, wIndex, data, timeout=1000)
-                results.append((bmRequestType, bRequest, True, None))
-                self._log_rgb(f"  -> Success!")
-            except usb.core.USBError as e:
-                results.append((bmRequestType, bRequest, False, str(e)))
-                self._log_rgb(f"  -> Error: {e}")
-
-        return results
-
-    def enumerate_rgb_commands(self, r, g, b):
-        """Enumerate possible RGB command bytes systematically"""
-        if self.device is None:
-            raise RuntimeError("Not connected")
-
-        # Try command bytes that might relate to LED control
-        # Based on patterns seen in similar devices
-        candidate_cmds = [
-            0x10, 0x11, 0x12, 0x20, 0x21, 0x22,
-            0x30, 0x31, 0x32, 0xa0, 0xa1, 0xa2,
-            0xb0, 0xb1, 0xb2, 0xb3, 0xc0, 0xc1,
-            0xd0, 0xd1, 0xe0, 0xe1, 0xf0, 0xf1
-        ]
-
-        for cmd in candidate_cmds:
-            packet = bytes([0x03, cmd, 0x00, r, g, b] + [0x00] * 59)
-            self._log_rgb(f"Trying cmd 0x{cmd:02x}: {packet[:8].hex()}")
-            try:
-                self._send_packet(packet)
-                time.sleep(0.05)
-            except usb.core.USBError as e:
-                self._log_rgb(f"  -> Error: {e}")
+                self._log_rgb(f"Mode {mode} error: {e}")
 
         return True
 
@@ -665,86 +630,67 @@ class MiniKBApp:
         parent.rowconfigure(2, weight=1)
 
         # Info label
-        info_frame = ttk.LabelFrame(parent, text="RGB LED Control (Experimental)", padding="10")
+        info_frame = ttk.LabelFrame(parent, text="LED Control (ch57x protocol)", padding="10")
         info_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
 
-        ttk.Label(info_frame, text="This feature tries different USB commands to control LEDs.\n"
-                                    "The exact protocol for your device is unknown - try different patterns!",
+        ttk.Label(info_frame, text="Control LED backlight using ch57x-keyboard-tool protocol.\n"
+                                    "Select color and mode, then click Apply.",
                   wraplength=600).pack()
 
-        # Color controls
-        color_frame = ttk.LabelFrame(parent, text="Color Settings", padding="10")
+        # Color and mode controls
+        color_frame = ttk.LabelFrame(parent, text="LED Settings", padding="10")
         color_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
 
-        # RGB sliders
-        slider_frame = ttk.Frame(color_frame)
-        slider_frame.pack(fill="x", pady=5)
+        # Color selection
+        color_row = ttk.Frame(color_frame)
+        color_row.pack(fill="x", pady=5)
 
-        self.rgb_vars = {
-            'r': tk.IntVar(value=255),
-            'g': tk.IntVar(value=0),
-            'b': tk.IntVar(value=0)
-        }
+        ttk.Label(color_row, text="Color:", width=10).pack(side="left")
+        self.led_color_var = tk.StringVar(value="Red")
+        color_combo = ttk.Combobox(color_row, textvariable=self.led_color_var,
+                                   values=list(LED_COLORS.keys()), state="readonly", width=15)
+        color_combo.pack(side="left", padx=5)
 
-        for i, (color, label) in enumerate([('r', 'Red'), ('g', 'Green'), ('b', 'Blue')]):
-            row_frame = ttk.Frame(slider_frame)
-            row_frame.pack(fill="x", pady=2)
-
-            ttk.Label(row_frame, text=f"{label}:", width=8).pack(side="left")
-            slider = ttk.Scale(row_frame, from_=0, to=255, variable=self.rgb_vars[color],
-                               orient="horizontal", length=200, command=lambda v: self._update_color_preview())
-            slider.pack(side="left", padx=5)
-            ttk.Label(row_frame, textvariable=self.rgb_vars[color], width=4).pack(side="left")
-
-        # Color preview
-        preview_frame = ttk.Frame(color_frame)
-        preview_frame.pack(fill="x", pady=10)
-
-        ttk.Label(preview_frame, text="Preview:").pack(side="left")
-        self.color_preview = tk.Label(preview_frame, text="   ", bg="#ff0000", width=10, height=2, relief="sunken")
-        self.color_preview.pack(side="left", padx=10)
-
-        # Preset colors
-        presets_frame = ttk.Frame(color_frame)
-        presets_frame.pack(fill="x", pady=5)
-
-        ttk.Label(presets_frame, text="Presets:").pack(side="left")
-        for name, (r, g, b) in list(RGB_PRESETS.items())[:8]:  # First 8 presets
-            btn = ttk.Button(presets_frame, text=name, width=8,
-                            command=lambda r=r, g=g, b=b: self._set_rgb_preset(r, g, b))
+        # Color preview buttons
+        for color_name in ['Red', 'Green', 'Blue', 'Cyan', 'Purple', 'White']:
+            btn = ttk.Button(color_row, text=color_name, width=7,
+                            command=lambda c=color_name: self.led_color_var.set(c))
             btn.pack(side="left", padx=2)
 
-        # Second row of presets
-        presets_frame2 = ttk.Frame(color_frame)
-        presets_frame2.pack(fill="x", pady=2)
-        ttk.Label(presets_frame2, text="        ").pack(side="left")
-        for name, (r, g, b) in list(RGB_PRESETS.items())[8:]:  # Remaining presets
-            btn = ttk.Button(presets_frame2, text=name, width=8,
-                            command=lambda r=r, g=g, b=b: self._set_rgb_preset(r, g, b))
+        # Mode selection
+        mode_row = ttk.Frame(color_frame)
+        mode_row.pack(fill="x", pady=5)
+
+        ttk.Label(mode_row, text="Mode:", width=10).pack(side="left")
+        self.led_mode_var = tk.StringVar(value="Steady")
+        mode_combo = ttk.Combobox(mode_row, textvariable=self.led_mode_var,
+                                  values=list(LED_MODES.keys()), state="readonly", width=15)
+        mode_combo.pack(side="left", padx=5)
+
+        # Mode buttons
+        for mode_name in LED_MODES.keys():
+            btn = ttk.Button(mode_row, text=mode_name, width=8,
+                            command=lambda m=mode_name: self.led_mode_var.set(m))
             btn.pack(side="left", padx=2)
 
-        # LED selection and pattern
-        control_frame = ttk.Frame(color_frame)
-        control_frame.pack(fill="x", pady=10)
+        # Raw mode value
+        raw_row = ttk.Frame(color_frame)
+        raw_row.pack(fill="x", pady=5)
 
-        ttk.Label(control_frame, text="LED Index:").pack(side="left")
-        self.led_index_var = tk.IntVar(value=0)
-        led_spin = ttk.Spinbox(control_frame, from_=0, to=5, textvariable=self.led_index_var, width=5)
-        led_spin.pack(side="left", padx=5)
-
-        ttk.Label(control_frame, text="Pattern:").pack(side="left", padx=(20, 0))
-        self.pattern_var = tk.IntVar(value=0)
-        pattern_spin = ttk.Spinbox(control_frame, from_=0, to=12, textvariable=self.pattern_var, width=5)
-        pattern_spin.pack(side="left", padx=5)
+        ttk.Label(raw_row, text="Raw Mode:", width=10).pack(side="left")
+        self.led_raw_var = tk.IntVar(value=1)
+        raw_spin = ttk.Spinbox(raw_row, from_=0, to=255, textvariable=self.led_raw_var, width=8)
+        raw_spin.pack(side="left", padx=5)
+        ttk.Label(raw_row, text="(0-255, use for direct mode control)").pack(side="left")
 
         # Action buttons
         action_frame = ttk.Frame(color_frame)
-        action_frame.pack(fill="x", pady=10)
+        action_frame.pack(fill="x", pady=15)
 
-        ttk.Button(action_frame, text="Send Color", command=self._send_rgb_color).pack(side="left", padx=5)
-        ttk.Button(action_frame, text="Try All Patterns", command=self._try_all_rgb_patterns).pack(side="left", padx=5)
-        ttk.Button(action_frame, text="Try Control Transfers", command=self._try_rgb_control).pack(side="left", padx=5)
-        ttk.Button(action_frame, text="Enumerate Commands", command=self._enumerate_rgb).pack(side="left", padx=5)
+        ttk.Button(action_frame, text="Apply Color+Mode", command=self._apply_led_color).pack(side="left", padx=5)
+        ttk.Button(action_frame, text="Apply Raw Mode", command=self._apply_led_raw).pack(side="left", padx=5)
+        ttk.Button(action_frame, text="LED Off", command=self._led_off).pack(side="left", padx=5)
+        ttk.Button(action_frame, text="Try All Modes (0-20)", command=self._try_all_led_modes).pack(side="left", padx=5)
 
         # RGB log
         log_frame = ttk.LabelFrame(parent, text="RGB Command Log", padding="5")
@@ -764,103 +710,72 @@ class MiniKBApp:
         # Set up RGB log callback
         self.device.rgb_log_callback = self._rgb_log
 
-    def _update_color_preview(self):
-        """Update the color preview box"""
-        r = self.rgb_vars['r'].get()
-        g = self.rgb_vars['g'].get()
-        b = self.rgb_vars['b'].get()
-        color = f"#{r:02x}{g:02x}{b:02x}"
-        self.color_preview.config(bg=color)
-
-    def _set_rgb_preset(self, r, g, b):
-        """Set RGB sliders to preset values"""
-        self.rgb_vars['r'].set(r)
-        self.rgb_vars['g'].set(g)
-        self.rgb_vars['b'].set(b)
-        self._update_color_preview()
-
     def _rgb_log(self, message):
         """Log RGB message"""
         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
         self.rgb_log.insert("end", f"[{timestamp}] {message}\n")
         self.rgb_log.see("end")
 
-    def _send_rgb_color(self):
-        """Send RGB color to device"""
+    def _apply_led_color(self):
+        """Apply LED color and mode"""
         if not self.connected:
             messagebox.showwarning("Not Connected", "Please connect to the device first.")
             return
 
-        r = self.rgb_vars['r'].get()
-        g = self.rgb_vars['g'].get()
-        b = self.rgb_vars['b'].get()
-        led_index = self.led_index_var.get()
-        pattern = self.pattern_var.get()
+        color_name = self.led_color_var.get()
+        mode_name = self.led_mode_var.get()
 
-        self._rgb_log(f"Sending R={r} G={g} B={b} to LED {led_index} using pattern {pattern}")
+        color_code = LED_COLORS.get(color_name, 1)
+        mode_code = LED_MODES.get(mode_name, 1)
+
+        self._rgb_log(f"Applying: {color_name} (code={color_code}), {mode_name} (code={mode_code})")
 
         try:
-            self.device.set_rgb_experimental(r, g, b, led_index, pattern)
-            self._rgb_log("Command sent successfully")
+            self.device.set_led_color_mode(color_code, mode_code)
+            self._rgb_log("LED color+mode applied!")
         except Exception as e:
             self._rgb_log(f"Error: {e}")
 
-    def _try_all_rgb_patterns(self):
-        """Try all RGB patterns"""
+    def _apply_led_raw(self):
+        """Apply raw LED mode value"""
         if not self.connected:
             messagebox.showwarning("Not Connected", "Please connect to the device first.")
             return
 
-        r = self.rgb_vars['r'].get()
-        g = self.rgb_vars['g'].get()
-        b = self.rgb_vars['b'].get()
-        led_index = self.led_index_var.get()
-
-        self._rgb_log(f"Trying all patterns for R={r} G={g} B={b} LED={led_index}")
-        self._rgb_log("Watch your device for any LED changes!")
+        raw_mode = self.led_raw_var.get()
+        self._rgb_log(f"Applying raw mode: {raw_mode} (0x{raw_mode:02x})")
 
         try:
-            results = self.device.set_rgb_all_patterns(r, g, b, led_index)
-            success_count = sum(1 for _, ok, _ in results if ok)
-            self._rgb_log(f"Completed: {success_count}/{len(results)} commands sent")
+            self.device.set_led_mode(raw_mode)
+            self._rgb_log(f"Raw mode {raw_mode} applied!")
         except Exception as e:
             self._rgb_log(f"Error: {e}")
 
-    def _try_rgb_control(self):
-        """Try RGB control transfers"""
+    def _led_off(self):
+        """Turn LED off"""
         if not self.connected:
             messagebox.showwarning("Not Connected", "Please connect to the device first.")
             return
 
-        r = self.rgb_vars['r'].get()
-        g = self.rgb_vars['g'].get()
-        b = self.rgb_vars['b'].get()
-        led_index = self.led_index_var.get()
-
-        self._rgb_log(f"Trying control transfers for R={r} G={g} B={b}")
+        self._rgb_log("Turning LED off...")
 
         try:
-            self.device.set_rgb_control_transfer(r, g, b, led_index)
-            self._rgb_log("Control transfer tests completed")
+            self.device.set_led_mode(0)
+            self._rgb_log("LED turned off!")
         except Exception as e:
             self._rgb_log(f"Error: {e}")
 
-    def _enumerate_rgb(self):
-        """Enumerate RGB command bytes"""
+    def _try_all_led_modes(self):
+        """Try all LED modes"""
         if not self.connected:
             messagebox.showwarning("Not Connected", "Please connect to the device first.")
             return
 
-        r = self.rgb_vars['r'].get()
-        g = self.rgb_vars['g'].get()
-        b = self.rgb_vars['b'].get()
-
-        self._rgb_log(f"Enumerating command bytes for R={r} G={g} B={b}")
-        self._rgb_log("This will try many commands - watch for LED changes!")
+        self._rgb_log("Trying all LED modes 0-20... Watch the keyboard!")
 
         try:
-            self.device.enumerate_rgb_commands(r, g, b)
-            self._rgb_log("Enumeration completed")
+            self.device.try_all_led_modes()
+            self._rgb_log("Finished trying all modes")
         except Exception as e:
             self._rgb_log(f"Error: {e}")
 
