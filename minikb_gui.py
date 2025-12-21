@@ -240,8 +240,11 @@ class MiniKBDevice:
 
         return results if results else None
 
-    def set_key(self, button_id, keycode):
-        """Program a button with a specific keycode"""
+    def set_key(self, button_id, keycode, modifier=0x00):
+        """Program a button with a specific keycode and modifier.
+
+        modifier: 0x00=none, 0x01=LCtrl, 0x02=LShift, 0x04=LAlt, etc.
+        """
         if self.device is None:
             raise RuntimeError("Not connected")
 
@@ -259,7 +262,8 @@ class MiniKBDevice:
             self._send_packet(set_packet1)
 
             # Set key - second packet with keycode
-            set_packet2 = bytes([0x03, button_id, 0x11, 0x01, 0x01, 0x00, keycode] + [0x00] * 58)
+            # Try: byte 4 = count, byte 5 = modifier, byte 6 = keycode
+            set_packet2 = bytes([0x03, button_id, 0x11, 0x01, 0x01, modifier, keycode] + [0x00] * 58)
             self._send_packet(set_packet2)
 
         # End/commit sequence
