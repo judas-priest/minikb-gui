@@ -240,34 +240,39 @@ class MiniKBDevice:
 
         return results if results else None
 
-    def set_key(self, button_id, keycode, modifier=0x00):
+    def set_key(self, button_id, keycode, modifier=0x00, layer=0):
         """Program a button with a specific keycode and modifier.
+
+        Correct ch57x k8890 protocol:
+        Start:  [0x03, 0xfe, layer+1, 0x01, 0x01, 0, 0, 0, 0]
+        Key:    [0x03, key_id, ((layer+1)<<4)|0x01, length, index, modifier, keycode, 0, 0]
+        End:    [0x03, 0xaa, 0xaa, 0, 0, 0, 0, 0, 0]
 
         modifier: 0x00=none, 0x01=LCtrl, 0x02=LShift, 0x04=LAlt, etc.
         """
         if self.device is None:
             raise RuntimeError("Not connected")
 
+        layer_byte = layer + 1  # layer 0 -> 1
+
         # Start sequence
-        start_packet = bytes([0x03, 0xa1, 0x01] + [0x00] * 62)
+        start_packet = bytes([0x03, 0xfe, layer_byte, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00])
         self._send_packet(start_packet)
 
         if keycode == 0x00:
-            # Clear key
-            clear_packet = bytes([0x03, button_id, 0x10] + [0x00] * 62)
+            # Clear key - type byte with clear flag
+            clear_packet = bytes([0x03, button_id, (layer_byte << 4) | 0x00] + [0x00] * 62)
             self._send_packet(clear_packet)
         else:
-            # Set key - first packet
-            set_packet1 = bytes([0x03, button_id, 0x11, 0x01] + [0x00] * 61)
-            self._send_packet(set_packet1)
-
-            # Set key - second packet with keycode
-            # Try: byte 4 = count, byte 5 = modifier, byte 6 = keycode
-            set_packet2 = bytes([0x03, button_id, 0x11, 0x01, 0x01, modifier, keycode] + [0x00] * 58)
-            self._send_packet(set_packet2)
+            # Set keyboard key
+            # Byte 2: ((layer+1)<<4)|0x01 for keyboard type
+            type_byte = (layer_byte << 4) | 0x01
+            # length=1 (single keypress), index=0 (first key)
+            key_packet = bytes([0x03, button_id, type_byte, 0x01, 0x00, modifier, keycode, 0x00, 0x00])
+            self._send_packet(key_packet)
 
         # End/commit sequence
-        end_packet = bytes([0x03, 0xaa, 0xaa] + [0x00] * 62)
+        end_packet = bytes([0x03, 0xaa, 0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         self._send_packet(end_packet)
 
     def program_all(self, config):
