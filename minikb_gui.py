@@ -683,25 +683,41 @@ class MiniKBApp:
         raw_spin.pack(side="left", padx=5)
         ttk.Label(raw_row, text="(0-255, use for direct mode control)").pack(side="left")
 
-        # Individual mode buttons
-        modes_frame = ttk.LabelFrame(color_frame, text="Quick Mode Buttons", padding="5")
+        # Working modes
+        modes_frame = ttk.LabelFrame(color_frame, text="LED Modes", padding="5")
         modes_frame.pack(fill="x", pady=10)
 
-        # Row 1: modes 0-9
-        row1 = ttk.Frame(modes_frame)
-        row1.pack(fill="x", pady=2)
-        for i in range(10):
-            btn = ttk.Button(row1, text=str(i), width=4,
-                            command=lambda m=i: self._set_led_mode_quick(m))
-            btn.pack(side="left", padx=2)
+        # Known working modes
+        known_row = ttk.Frame(modes_frame)
+        known_row.pack(fill="x", pady=2)
+        ttk.Label(known_row, text="Working:").pack(side="left", padx=5)
+        ttk.Button(known_row, text="Off (0)", width=8, command=lambda: self._set_led_mode_quick(0)).pack(side="left", padx=2)
+        ttk.Button(known_row, text="Cyan (1)", width=8, command=lambda: self._set_led_mode_quick(1)).pack(side="left", padx=2)
+        ttk.Button(known_row, text="Rainbow (2)", width=10, command=lambda: self._set_led_mode_quick(2)).pack(side="left", padx=2)
 
-        # Row 2: modes 10-19
-        row2 = ttk.Frame(modes_frame)
-        row2.pack(fill="x", pady=2)
-        for i in range(10, 20):
-            btn = ttk.Button(row2, text=str(i), width=4,
+        # Color+mode combinations to try: (color << 4) | mode
+        # Colors: 0=White, 1=Red, 2=Orange, 3=Yellow, 4=Green, 5=Cyan, 6=Blue, 7=Purple
+        color_row = ttk.Frame(modes_frame)
+        color_row.pack(fill="x", pady=5)
+        ttk.Label(color_row, text="Try colors:").pack(side="left", padx=5)
+
+        color_modes = [
+            ("Red", 0x11), ("Orange", 0x21), ("Yellow", 0x31), ("Green", 0x41),
+            ("Cyan", 0x51), ("Blue", 0x61), ("Purple", 0x71), ("White", 0x01)
+        ]
+        for name, mode in color_modes:
+            btn = ttk.Button(color_row, text=name, width=7,
+                            command=lambda m=mode: self._set_led_mode_quick(m))
+            btn.pack(side="left", padx=1)
+
+        # Raw mode buttons 0-19
+        raw_frame = ttk.Frame(modes_frame)
+        raw_frame.pack(fill="x", pady=5)
+        ttk.Label(raw_frame, text="Raw 0-9:").pack(side="left", padx=5)
+        for i in range(10):
+            btn = ttk.Button(raw_frame, text=str(i), width=3,
                             command=lambda m=i: self._set_led_mode_quick(m))
-            btn.pack(side="left", padx=2)
+            btn.pack(side="left", padx=1)
 
         # Action buttons
         action_frame = ttk.Frame(color_frame)
