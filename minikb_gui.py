@@ -471,10 +471,10 @@ class MiniKBApp:
         self.button_indicators = {}
 
         self._create_ui()
-        self._load_config()
 
-        # Set initial config to match detected device state
-        self._set_detected_config()
+        # Load saved config, or use defaults if no saved config
+        if not self._load_config():
+            self._set_detected_config()
 
     def _create_ui(self):
         """Create the user interface"""
@@ -916,14 +916,17 @@ class MiniKBApp:
             messagebox.showerror("Error", f"Failed to save:\n{e}")
 
     def _load_config(self):
-        """Load configuration from default file"""
+        """Load configuration from default file. Returns True if loaded."""
         if os.path.exists(self.CONFIG_FILE):
             try:
                 with open(self.CONFIG_FILE, 'r') as f:
                     config = json.load(f)
                 self._apply_config_to_ui(config)
-            except Exception:
-                pass
+                print(f"Loaded config from {self.CONFIG_FILE}")
+                return True
+            except Exception as e:
+                print(f"Failed to load config: {e}")
+        return False
 
     def _load_config_file(self):
         """Load configuration from selected file"""
