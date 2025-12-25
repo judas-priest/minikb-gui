@@ -8,6 +8,8 @@ export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
 # Toggle: if active → stop, if inactive → start
 if systemctl --user is-active --quiet hyperhdr.service; then
     systemctl --user stop hyperhdr.service
+    pkill -9 -x hyperhdr 2>/dev/null
+    rm -f /tmp/hyperhdr-domain 2>/dev/null
     sleep 3
     notify-send "HyperHDR" "Stopped" -i video-display
 else
