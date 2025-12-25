@@ -5,7 +5,7 @@
 ## Кнопки
 
 - **Кнопка 4**: Display toggle (Ctrl+Alt+D) - переключение eDP-1
-- **Кнопка 6**: HyperHDR toggle (Ctrl+Alt+H) - запуск/остановка HyperHDR
+- **Кнопка 6**: HyperHDR toggle (Super+H) - запуск/остановка HyperHDR
 
 ## Установка
 
@@ -30,7 +30,7 @@ ch57x-keyboard-tool upload mapping-media.yaml
 #### Кнопка 6 - HyperHDR Toggle
 
 1. **Edit → New → Global Shortcut → Command/URL**
-2. Trigger tab: `Ctrl+Alt+H`
+2. Trigger tab: `Meta+H` (Super+H)
 3. Action tab: `/home/hive/Projects/minikb-gui/hyperhdr-toggle.sh`
 
 Готово!

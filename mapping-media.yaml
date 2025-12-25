@@ -14,7 +14,7 @@ layers:
       # Prev track   Play/Pause      Next track
 
       # Row 2: Display toggle + Zellij + HyperHDR
-      - [ctrl-alt-d,  ctrl-t,         ctrl-alt-h]
+      - [ctrl-alt-d,  ctrl-t,         meta-h]
       # Display      Tab mode        HyperHDR
 
     knobs:
