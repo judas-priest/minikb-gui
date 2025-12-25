@@ -7,7 +7,7 @@ echo
 # Начальная очистка
 echo "1. Останавливаем все процессы hyperhdr..."
 systemctl --user stop hyperhdr.service 2>/dev/null
-pkill -9 hyperhdr 2>/dev/null
+pkill -9 -x hyperhdr 2>/dev/null
 sleep 1
 
 # Проверка начального состояния

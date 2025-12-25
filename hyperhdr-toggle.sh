@@ -10,8 +10,8 @@ if systemctl --user is-active --quiet hyperhdr.service; then
     systemctl --user stop hyperhdr.service
     notify-send "HyperHDR" "Stopped" -i video-display
 else
-    # Kill any manual instances before starting via systemd
-    pkill -9 hyperhdr 2>/dev/null
+    # Kill any manual instances before starting via systemd (exact match only)
+    pkill -9 -x hyperhdr 2>/dev/null
     systemctl --user start hyperhdr.service
     notify-send "HyperHDR" "Started" -i video-display
 fi
