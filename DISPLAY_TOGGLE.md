@@ -9,6 +9,19 @@
 
 ## Установка
 
+### 0. Установить HyperHDR systemd service (только для кнопки 6)
+
+```bash
+# Скопировать service файл
+mkdir -p ~/.config/systemd/user
+cp hyperhdr.service ~/.config/systemd/user/
+
+# Перезагрузить systemd
+systemctl --user daemon-reload
+```
+
+**Примечание:** Service НЕ нужно включать (enable)! Кнопка будет запускать/останавливать вручную.
+
 ### 1. Загрузить маппинг на клавиатуру
 
 ```bash
@@ -43,10 +56,11 @@ ch57x-keyboard-tool upload mapping-media.yaml
 - Показывает уведомление при переключении
 
 ### HyperHDR Toggle (кнопка 6)
-- Проверяет процесс `hyperhdr`
-- Если запущен → убивает процесс
-- Если не запущен → запускает процесс
+- Проверяет статус `hyperhdr.service` через systemd
+- Если запущен → останавливает service (`systemctl --user stop`)
+- Если не запущен → запускает service (`systemctl --user start`)
 - Показывает уведомление при переключении
+- Надёжнее чем pkill/pgrep
 
 ## Тестирование
 
@@ -61,11 +75,14 @@ kscreen-doctor -o
 
 ### HyperHDR Toggle
 ```bash
-# Проверить запущен ли HyperHDR
-pgrep hyperhdr
+# Проверить статус service
+systemctl --user status hyperhdr.service
 
 # Запустить toggler вручную
 ./hyperhdr-toggle.sh
+
+# Логи (если не работает)
+journalctl --user -u hyperhdr.service -f
 ```
 
 ## Настройка скрипта
