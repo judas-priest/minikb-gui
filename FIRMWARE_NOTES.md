@@ -119,6 +119,40 @@ sudo python3 minikb_filter.py
 ```
 Intercepts keyboard events and removes Ctrl modifier.
 
+## Linux Configuration (Recommended) ⭐
+**ch57x-keyboard-tool** - Configure keys and RGB without reflashing!
+- https://github.com/kriomant/ch57x-keyboard-tool
+- Works with current firmware (1189:8890)
+- YAML-based key mapping
+- RGB LED control
+
+**Installation:**
+```bash
+cargo install ch57x-keyboard-tool
+```
+
+**RGB Control:**
+```bash
+ch57x-keyboard-tool led 0  # Off
+ch57x-keyboard-tool led 1  # Mode 1
+ch57x-keyboard-tool led 2  # Mode 2
+ch57x-keyboard-tool led 3  # Mode 3
+```
+
+**Key Mapping:**
+```bash
+# Create mapping.yaml (see mapping.yaml example)
+sudo ch57x-keyboard-tool upload < mapping.yaml
+```
+
+**USB Permissions:**
+```bash
+echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="1189", ATTR{idProduct}=="8890", MODE="0666"' | sudo tee /etc/udev/rules.d/99-minikb.rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+**Full Guide:** https://xaviesteve.com/7047/setup-macropad-aliexpress-linux/
+
 ## PCB Photo
 Saved: /tmp/minikb_pcb.jpg
 
