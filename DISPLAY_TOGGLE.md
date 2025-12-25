@@ -42,6 +42,12 @@ ch57x-keyboard-tool upload mapping-media.yaml
 
 #### Кнопка 6 - HyperHDR Toggle
 
+**Вариант 1 (рекомендуется): Вставить код напрямую**
+1. **Edit → New → Global Shortcut → Command/URL**
+2. Trigger tab: `Meta+H` (Super+H)
+3. Action tab: вставить код из `hyperhdr-toggle.sh`
+
+**Вариант 2: Через путь к скрипту**
 1. **Edit → New → Global Shortcut → Command/URL**
 2. Trigger tab: `Meta+H` (Super+H)
 3. Action tab: `/home/hive/Projects/minikb-gui/hyperhdr-toggle.sh`
