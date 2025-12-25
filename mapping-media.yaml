@@ -13,9 +13,9 @@ layers:
       - [previous,    play,           next]
       # Prev track   Play/Pause      Next track
 
-      # Row 2: Zellij modes + utility
-      - [ctrl-p,      ctrl-t,         application]
-      # Pane mode    Tab mode        Context menu
+      # Row 2: Display toggle + Zellij + utility
+      - [ctrl-alt-d,  ctrl-t,         application]
+      # Display      Tab mode        Context menu
 
     knobs:
       - ccw: volumedown       # Volume down
