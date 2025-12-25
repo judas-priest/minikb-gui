@@ -12,6 +12,13 @@ import threading
 import time
 from datetime import datetime
 
+# YAML config support (ch57x-keyboard-tool compatible)
+try:
+    from yaml_config import apply_yaml_to_device, parse_yaml_config
+    YAML_CONFIG_AVAILABLE = True
+except ImportError:
+    YAML_CONFIG_AVAILABLE = False
+
 try:
     import usb.core
     import usb.util
@@ -934,17 +941,32 @@ class MiniKBApp:
         return False
 
     def _load_config_file(self):
-        """Load configuration from selected file"""
+        """Load configuration from selected file (JSON or YAML)"""
+        filetypes = [("Config files", "*.json *.yaml *.yml"), ("JSON files", "*.json"), ("YAML files", "*.yaml *.yml"), ("All files", "*.*")]
         filepath = filedialog.askopenfilename(
             defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            filetypes=filetypes
         )
         if filepath:
             try:
-                with open(filepath, 'r') as f:
-                    config = json.load(f)
-                self._apply_config_to_ui(config)
-                messagebox.showinfo("Loaded", "Configuration loaded successfully!")
+                # Check file extension
+                if filepath.endswith(('.yaml', '.yml')):
+                    # Load YAML and apply directly to device
+                    if not YAML_CONFIG_AVAILABLE:
+                        messagebox.showerror("Error", "YAML support not available. Install pyyaml: pip install pyyaml")
+                        return
+
+                    if self.device and self.device.device:
+                        apply_yaml_to_device(self.device, filepath)
+                        messagebox.showinfo("Success", "YAML config uploaded to device!\n(ch57x-keyboard-tool format)")
+                    else:
+                        messagebox.showerror("Error", "Device not connected!")
+                else:
+                    # Load JSON
+                    with open(filepath, 'r') as f:
+                        config = json.load(f)
+                    self._apply_config_to_ui(config)
+                    messagebox.showinfo("Loaded", "Configuration loaded successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load:\n{e}")
 

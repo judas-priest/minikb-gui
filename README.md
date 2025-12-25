@@ -50,6 +50,7 @@ sudo usermod -a -G plugdev $USER
 
 ## Usage
 
+### GUI Mode (Recommended)
 ```bash
 # Run GUI
 python3 minikb_gui.py
@@ -60,6 +61,24 @@ python3 minikb_gui.py
 # If permission denied, run with sudo
 sudo python3 minikb_gui.py
 ```
+
+### YAML Config Mode (ch57x-keyboard-tool compatible)
+
+The GUI now supports loading YAML configs in the same format as `ch57x-keyboard-tool`!
+
+**Load YAML:**
+1. Click "Load Config" button in GUI
+2. Select your `mapping.yaml` file
+3. Config will be uploaded directly to device
+
+**Or use CLI:**
+```bash
+# Using ch57x-keyboard-tool (recommended)
+ch57x-keyboard-tool upload < mapping.yaml
+ch57x-keyboard-tool led 1  # Set RGB mode
+```
+
+See `mapping.yaml` for example configuration.
 
 ## Configuration
 
@@ -94,7 +113,41 @@ The application saves configuration to `~/.minikb_config.json`.
 pip3 install pyusb
 ```
 
+## YAML Configuration
+
+The project supports YAML configs compatible with [ch57x-keyboard-tool](https://github.com/kriomant/ch57x-keyboard-tool).
+
+**Install ch57x-keyboard-tool:**
+```bash
+cargo install ch57x-keyboard-tool
+```
+
+**Example mapping.yaml:**
+```yaml
+orientation: normal
+rows: 2
+columns: 3
+knobs: 1
+
+layers:
+  - buttons:
+      - [a, b, c]
+      - [d, e, f]
+    knobs:
+      - ccw: volumedown
+        press: mute
+        cw: volumeup
+```
+
+**Features:**
+- Modifier support: `ctrl-c`, `ctrl-shift-t`, etc.
+- Media keys: `volumeup`, `volumedown`, `mute`, `play`, `next`, `previous`
+- Function keys: `f1`-`f24`
+- RGB control: `ch57x-keyboard-tool led 0-3`
+
 ## Related
 
+- ch57x-keyboard-tool: https://github.com/kriomant/ch57x-keyboard-tool
+- Setup guide: https://xaviesteve.com/7047/setup-macropad-aliexpress-linux/
 - Original C implementation: `../hid-minikb-libusb/`
 - Based on: https://github.com/devkev/hid-minikb-libusb
