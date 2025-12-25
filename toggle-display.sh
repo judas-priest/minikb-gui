@@ -8,7 +8,7 @@ EXTERNAL="HDMI-A-1"
 # Check current state of internal display
 OUTPUTS=$(kscreen-doctor -o 2>&1)
 
-if echo "$OUTPUTS" | grep "$INTERNAL" | grep -q "enabled"; then
+if echo "$OUTPUTS" | grep -A 1 "$INTERNAL" | grep -q "enabled"; then
     # Internal is ON → turn it OFF
     # Move external to primary position (0,0)
     kscreen-doctor output.$INTERNAL.disable output.$EXTERNAL.position.0,0 2>&1
