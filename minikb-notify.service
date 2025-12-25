@@ -5,6 +5,10 @@ After=graphical-session.target
 [Service]
 Type=simple
 ExecStart=%h/Projects/minikb-gui/notification-blink.sh
+Environment="PATH=%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus"
+StandardOutput=journal
+StandardError=journal
 Restart=on-failure
 RestartSec=5
 
