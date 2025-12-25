@@ -1,6 +1,11 @@
-# KDE Plasma Display Toggle Setup
+# MiniKB Toggle Scripts Setup
 
-Переключение встроенного экрана (eDP-1) через кнопку 4 на MiniKB.
+Переключение встроенного экрана и HyperHDR через кнопки на MiniKB.
+
+## Кнопки
+
+- **Кнопка 4**: Display toggle (Ctrl+Alt+D) - переключение eDP-1
+- **Кнопка 6**: HyperHDR toggle (Ctrl+Alt+H) - запуск/остановка HyperHDR
 
 ## Установка
 
@@ -12,33 +17,55 @@ ch57x-keyboard-tool upload mapping-media.yaml
 
 Кнопка 4 теперь отправляет **Ctrl+Alt+D**.
 
-### 2. Настроить глобальный shortcut в KDE
+### 2. Настроить глобальные shortcuts в KDE
 
 **System Settings → Shortcuts → Custom Shortcuts:**
 
-1. Нажать **Edit → New → Global Shortcut → Command/URL**
-2. Trigger tab:
-   - Нажать кнопку для Shortcut
-   - Нажать `Ctrl+Alt+D`
-3. Action tab:
-   - Command/URL: `/home/hive/Projects/minikb-gui/toggle-display.sh`
+#### Кнопка 4 - Display Toggle
 
-Готово! Теперь кнопка 4 переключает встроенный экран.
+1. **Edit → New → Global Shortcut → Command/URL**
+2. Trigger tab: `Ctrl+Alt+D`
+3. Action tab: `/home/hive/Projects/minikb-gui/toggle-display.sh`
+
+#### Кнопка 6 - HyperHDR Toggle
+
+1. **Edit → New → Global Shortcut → Command/URL**
+2. Trigger tab: `Ctrl+Alt+H`
+3. Action tab: `/home/hive/Projects/minikb-gui/hyperhdr-toggle.sh`
+
+Готово!
 
 ## Как работает
 
-- **eDP-1** (встроенный экран) - включается/выключается
-- **HDMI-A-1** (внешний монитор) - всегда включен
+### Display Toggle (кнопка 4)
+- **eDP-1** (встроенный экран) - включается слева, выключается
+- **HDMI-A-1** (внешний монитор) - всегда включен, справа от eDP-1
+- Показывает уведомление при переключении
+
+### HyperHDR Toggle (кнопка 6)
+- Проверяет процесс `hyperhdr`
+- Если запущен → убивает процесс
+- Если не запущен → запускает процесс
 - Показывает уведомление при переключении
 
 ## Тестирование
 
+### Display Toggle
 ```bash
 # Проверить текущее состояние
 kscreen-doctor -o
 
 # Запустить скрипт вручную
 ./toggle-display.sh
+```
+
+### HyperHDR Toggle
+```bash
+# Проверить запущен ли HyperHDR
+pgrep hyperhdr
+
+# Запустить toggler вручную
+./hyperhdr-toggle.sh
 ```
 
 ## Настройка скрипта
