@@ -1,43 +1,38 @@
 # MiniKB Mapping Configuration
-# 6 keys + rotary encoder
+# 6 keys (2 rows × 3 columns) + 1 rotary encoder
 
-# Layer 0 (default)
-keys:
-  # Button 1 - F13
-  - f13
+orientation: normal
+rows: 2
+columns: 3
+knobs: 1
 
-  # Button 2 - F14
-  - f14
+layers:
+  # Layer 0 - Test layer with simple keys
+  - buttons:
+      # Row 1
+      - [a, b, c]
+      # Row 2
+      - [d, e, f]
 
-  # Button 3 - F15
-  - f15
+    knobs:
+      - ccw: volumedown      # Rotate left
+        press: mute          # Press
+        cw: volumeup         # Rotate right
 
-  # Button 4 - F16
-  - f16
+# Alternative layer with F-keys (uncomment to use):
+#  - buttons:
+#      - [f13, f14, f15]
+#      - [f16, f17, f18]
+#    knobs:
+#      - ccw: f19
+#        press: f20
+#        cw: f21
 
-  # Button 5 - F17
-  - f17
-
-  # Button 6 - F18
-  - f18
-
-  # Encoder rotate left - F19
-  - f19
-
-  # Encoder button - F20
-  - f20
-
-  # Encoder rotate right - F21
-  - f21
-
-# Alternative: Media keys example
-# keys:
-#   - volumedown
-#   - volumeup
-#   - play
-#   - next
-#   - previous
-#   - mute
-#   - wheel(-1)    # encoder left - scroll up
-#   - screenlock   # encoder button
-#   - wheel(1)     # encoder right - scroll down
+# Alternative with media keys:
+#  - buttons:
+#      - [previous, play, next]
+#      - [ctrl-c, ctrl-v, ctrl-z]
+#    knobs:
+#      - ccw: volumedown
+#        press: mute
+#        cw: volumeup
