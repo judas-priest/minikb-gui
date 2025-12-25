@@ -25,8 +25,8 @@ if [ $PGREP_RET2 -eq 0 ]; then
     # HyperHDR is running → stop everything
     echo "Stopping hyperhdr" >> "$LOG"
     systemctl --user stop hyperhdr.service 2>/dev/null || true
-    pkill -x hyperhdr 2>/dev/null || true
-    sleep 0.2
+    /usr/bin/pkill hyperhdr 2>/dev/null || true
+    sleep 0.3
     notify-send "HyperHDR" "Stopped" -i video-display
 else
     # HyperHDR is not running → start via systemd
