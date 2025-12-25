@@ -1,0 +1,12 @@
+[Unit]
+Description=MiniKB Notification LED Blink
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/Projects/minikb-gui/notification-blink.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
