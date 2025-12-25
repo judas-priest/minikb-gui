@@ -2,6 +2,15 @@
 # Toggle HyperHDR service via systemd
 
 LOG="/tmp/hyperhdr-toggle.log"
+LOCKFILE="/tmp/hyperhdr-toggle.lock"
+
+# Prevent concurrent execution with flock
+exec 200>"$LOCKFILE"
+flock -n 200 || {
+    echo "$(date): Already running, exit" >> "$LOG"
+    exit 0
+}
+
 echo "=== $(date) ===" >> "$LOG"
 
 # Ensure systemd can find user session
