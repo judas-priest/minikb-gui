@@ -19,7 +19,7 @@ fi
 blink_led() {
     echo "[$(date '+%H:%M:%S')] Blinking LED..." >&2
     $TOOL led 2 2>&1 || echo "Failed to set LED 2" >&2
-    sleep 1
+    sleep 2
     $TOOL led 0 2>&1 || echo "Failed to set LED 0" >&2
 }
 
