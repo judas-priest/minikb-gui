@@ -6,12 +6,16 @@ echo
 
 # Начальная очистка
 echo "1. Останавливаем все процессы hyperhdr..."
-systemctl --user stop hyperhdr.service 2>/dev/null
-pkill -9 -x hyperhdr 2>/dev/null
+pkill -9 hyperhdr 2>/dev/null
+rm -f /tmp/hyperhdr-domain 2>/dev/null
 sleep 1
 
 # Проверка начального состояния
-STATUS=$(systemctl --user is-active hyperhdr.service 2>/dev/null)
+if pgrep hyperhdr > /dev/null 2>&1; then
+    STATUS="running"
+else
+    STATUS="stopped"
+fi
 echo "Начальное состояние: $STATUS"
 echo
 
@@ -19,12 +23,12 @@ echo
 echo "2. Эмуляция нажатия кнопки (должен запустить)..."
 ./hyperhdr-toggle.sh
 sleep 1
-STATUS=$(systemctl --user is-active hyperhdr.service 2>/dev/null)
-echo "Состояние после 1 нажатия: $STATUS"
-if [ "$STATUS" = "active" ]; then
+if pgrep hyperhdr > /dev/null 2>&1; then
+    echo "Состояние после 1 нажатия: running"
     echo "✓ OK: Запустился"
 else
-    echo "✗ FAIL: Не запустился (ожидалось active, получено $STATUS)"
+    echo "Состояние после 1 нажатия: stopped"
+    echo "✗ FAIL: Не запустился"
 fi
 echo
 
@@ -32,12 +36,12 @@ echo
 echo "3. Эмуляция нажатия кнопки (должен остановить)..."
 ./hyperhdr-toggle.sh
 sleep 1
-STATUS=$(systemctl --user is-active hyperhdr.service 2>/dev/null)
-echo "Состояние после 2 нажатия: $STATUS"
-if [ "$STATUS" = "inactive" ] || [ "$STATUS" = "failed" ]; then
-    echo "✓ OK: Остановился"
+if pgrep hyperhdr > /dev/null 2>&1; then
+    echo "Состояние после 2 нажатия: running"
+    echo "✗ FAIL: Не остановился"
 else
-    echo "✗ FAIL: Не остановился (ожидалось inactive, получено $STATUS)"
+    echo "Состояние после 2 нажатия: stopped"
+    echo "✓ OK: Остановился"
 fi
 echo
 
@@ -45,12 +49,12 @@ echo
 echo "4. Эмуляция нажатия кнопки (должен запустить снова)..."
 ./hyperhdr-toggle.sh
 sleep 1
-STATUS=$(systemctl --user is-active hyperhdr.service 2>/dev/null)
-echo "Состояние после 3 нажатия: $STATUS"
-if [ "$STATUS" = "active" ]; then
+if pgrep hyperhdr > /dev/null 2>&1; then
+    echo "Состояние после 3 нажатия: running"
     echo "✓ OK: Запустился снова"
 else
-    echo "✗ FAIL: Не запустился (ожидалось active, получено $STATUS)"
+    echo "Состояние после 3 нажатия: stopped"
+    echo "✗ FAIL: Не запустился"
 fi
 echo
 
@@ -58,12 +62,12 @@ echo
 echo "5. Эмуляция нажатия кнопки (должен остановить снова)..."
 ./hyperhdr-toggle.sh
 sleep 1
-STATUS=$(systemctl --user is-active hyperhdr.service 2>/dev/null)
-echo "Состояние после 4 нажатия: $STATUS"
-if [ "$STATUS" = "inactive" ] || [ "$STATUS" = "failed" ]; then
-    echo "✓ OK: Остановился снова"
+if pgrep hyperhdr > /dev/null 2>&1; then
+    echo "Состояние после 4 нажатия: running"
+    echo "✗ FAIL: Не остановился"
 else
-    echo "✗ FAIL: Не остановился (ожидалось inactive, получено $STATUS)"
+    echo "Состояние после 4 нажатия: stopped"
+    echo "✓ OK: Остановился снова"
 fi
 echo
 
