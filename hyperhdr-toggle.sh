@@ -1,23 +1,17 @@
 #!/bin/bash
-# Toggle HyperHDR service via systemd
+# Toggle HyperHDR (direct process control, no systemd)
 
-# Ensure systemd can find user session
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
-
-# Toggle: if active → stop, if inactive → start
-if systemctl --user is-active --quiet hyperhdr.service; then
-    systemctl --user stop hyperhdr.service
-    pkill -9 -x hyperhdr 2>/dev/null
-    rm -f /tmp/hyperhdr-domain 2>/dev/null
-    sleep 3
-    notify-send "HyperHDR" "Stopped" -i video-display
-else
-    # Kill any manual instances and remove stale locks before starting
-    pkill -9 -x hyperhdr 2>/dev/null
+# Check if hyperhdr is running
+if pgrep hyperhdr > /dev/null 2>&1; then
+    # Running → kill it
+    pkill -9 hyperhdr
     rm -f /tmp/hyperhdr-domain 2>/dev/null
     sleep 1
-    systemctl --user start hyperhdr.service
-    sleep 3
+    notify-send "HyperHDR" "Stopped" -i video-display
+else
+    # Not running → start it
+    rm -f /tmp/hyperhdr-domain 2>/dev/null
+    hyperhdr > /dev/null 2>&1 &
+    sleep 2
     notify-send "HyperHDR" "Started" -i video-display
 fi
