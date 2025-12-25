@@ -1,0 +1,53 @@
+# SSH-friendly mapping for MiniKB
+# 6 keys (2x3) + encoder
+
+orientation: normal
+rows: 2
+columns: 3
+knobs: 1
+
+layers:
+  # Layer 0 - SSH shortcuts
+  - buttons:
+      # Row 1: Common terminal operations
+      - [ctrl-c,      ctrl-z,      ctrl-d]
+      # Interrupt    Suspend       EOF/Exit
+
+      # Row 2: Text editing in terminal
+      - [ctrl-l,      ctrl-r,      ctrl-w]
+      # Clear screen  History      Del word
+
+    knobs:
+      - ccw: pageup         # Scroll up in terminal
+        press: ctrl-a       # Beginning of line (or tmux prefix)
+        cw: pagedown        # Scroll down
+
+# Alternative SSH mapping (uncomment to use):
+#  - buttons:
+#      # Row 1: tmux window navigation
+#      - [ctrl-a-1,    ctrl-a-2,    ctrl-a-3]
+#      # tmux win 1   tmux win 2   tmux win 3
+#
+#      # Row 2: Common commands
+#      - [ctrl-c,      ctrl-d,      ctrl-l]
+#      # Interrupt    Exit         Clear
+#
+#    knobs:
+#      - ccw: ctrl-a-p      # Previous tmux window
+#        press: ctrl-a-d    # Detach tmux
+#        cw: ctrl-a-n       # Next tmux window
+
+# Another alternative - Text navigation:
+#  - buttons:
+#      # Row 1: Line navigation
+#      - [ctrl-a,      ctrl-e,      ctrl-k]
+#      # Line start   Line end     Kill to end
+#
+#      # Row 2: Word operations
+#      - [ctrl-w,      alt-b,       alt-f]
+#      # Del word     Word back    Word forward
+#
+#    knobs:
+#      - ccw: up            # Up arrow
+#        press: enter       # Enter
+#        cw: down           # Down arrow
