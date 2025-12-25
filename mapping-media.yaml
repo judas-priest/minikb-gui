@@ -1,0 +1,30 @@
+# Media + Zellij controls for MiniKB
+# 6 keys (2x3) + encoder
+
+orientation: normal
+rows: 2
+columns: 3
+knobs: 1
+
+layers:
+  # Layer 0 - Media controls + Zellij
+  - buttons:
+      # Row 1: Media controls
+      - [previous,    play,           next]
+      # Prev track   Play/Pause      Next track
+
+      # Row 2: Zellij modes + utility
+      - [ctrl-p,      ctrl-t,         application]
+      # Pane mode    Tab mode        Context menu
+
+    knobs:
+      - ccw: volumedown       # Volume down
+        press: mute           # Mute
+        cw: volumeup          # Volume up
+
+# Zellij shortcuts:
+# Ctrl+P - Pane mode (create, move, close panes)
+# Ctrl+T - Tab mode (create, switch, close tabs)
+# Ctrl+S - Scroll mode
+# Ctrl+O - Session mode
+# Ctrl+H - Move focus mode
