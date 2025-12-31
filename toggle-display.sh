@@ -6,8 +6,8 @@
 INTERNAL="eDP-1"
 EXTERNAL="HDMI-A-1"
 
-# Get all connected outputs
-OUTPUTS=$(kscreen-doctor -o 2>&1)
+# Get all connected outputs (strip ANSI color codes)
+OUTPUTS=$(kscreen-doctor -o 2>&1 | sed 's/\x1b\[[0-9;]*m//g')
 
 # Find third monitor (connected, not internal and not external)
 THIRD=""
@@ -24,10 +24,10 @@ done
 # Check if internal is currently enabled
 INTERNAL_ENABLED=$(echo "$OUTPUTS" | grep -A 1 "Output:.*$INTERNAL" | grep -q "enabled" && echo "yes" || echo "no")
 
-# Get resolution widths (strip ANSI codes)
+# Get resolution widths
 get_width() {
     local output=$1
-    echo "$OUTPUTS" | sed 's/\x1b\[[0-9;]*m//g' | grep -A 20 "Output:.*$output" | grep "Geometry:" | head -n1 | sed 's/.*Geometry: [0-9]*,[0-9]* \([0-9]*\)x.*/\1/'
+    echo "$OUTPUTS" | grep -A 20 "Output:.*$output" | grep "Geometry:" | head -n1 | sed 's/.*Geometry: [0-9]*,[0-9]* \([0-9]*\)x.*/\1/'
 }
 
 if [ "$INTERNAL_ENABLED" = "yes" ]; then
